@@ -43,17 +43,22 @@ public sealed record MessageEnvelope
     [JsonPropertyName("body")]
     public JsonElement Body { get; init; }
 
+    [JsonPropertyName("artifacts")]
+    public IReadOnlyList<ArtifactReference> Artifacts { get; init; } = Array.Empty<ArtifactReference>();
+
     public void Validate(DateTimeOffset? now = null)
     {
         if (!string.Equals(Protocol, ProtocolV1, StringComparison.Ordinal))
             throw new InvalidOperationException($"Unsupported protocol: {Protocol}");
-        if (string.IsNullOrWhiteSpace(MessageId))
-            throw new InvalidOperationException("message_id is required");
+        if (!Guid.TryParse(MessageId, out _))
+            throw new InvalidOperationException("message_id must be a UUID");
         if (string.IsNullOrWhiteSpace(MessageType))
             throw new InvalidOperationException("message_type is required");
         if (string.IsNullOrWhiteSpace(Sender) || string.IsNullOrWhiteSpace(Target))
             throw new InvalidOperationException("sender and target are required");
         if (ExpiresAt is { } expires && expires <= (now ?? DateTimeOffset.UtcNow))
             throw new InvalidOperationException("message is expired");
+        foreach (var artifact in Artifacts)
+            artifact.Validate();
     }
 }
