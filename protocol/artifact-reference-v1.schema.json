@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sempersupra.org/secure-messaging/artifact-reference-v1.schema.json",
+  "title": "Secure Messaging Artifact Reference v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_id", "sha256", "size", "locations"],
+  "properties": {
+    "artifact_id": {"type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+    "size": {"type": "integer", "minimum": 0},
+    "media_type": {"type": ["string", "null"]},
+    "logical_name": {"type": ["string", "null"]},
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["provider", "locator", "attributes"],
+        "properties": {
+          "provider": {"type": "string", "minLength": 1},
+          "locator": {"type": "string", "minLength": 1},
+          "attributes": {"type": "object"}
+        }
+      }
+    }
+  }
+}
