@@ -1,6 +1,6 @@
 {
   "protocol": "org.sempersupra.secure-messaging.v1",
-  "message_id": "msg-0001",
+  "message_id": "00000000-0000-0000-0000-000000000001",
   "message_type": "example.available",
   "sender": "@sender:example.org",
   "target": "@recipient:example.org",
@@ -13,5 +13,6 @@
   "body": {
     "application": "synthetic-consumer",
     "value": 42
-  }
+  },
+  "artifacts": []
 }
