@@ -4,10 +4,10 @@
   "title": "Secure Messaging Envelope v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["protocol", "message_id", "message_type", "sender", "target", "created_at", "requires_ack", "body"],
+  "required": ["protocol", "message_id", "message_type", "sender", "target", "created_at", "requires_ack", "body", "artifacts"],
   "properties": {
     "protocol": {"const": "org.sempersupra.secure-messaging.v1"},
-    "message_id": {"type": "string", "minLength": 1},
+    "message_id": {"type": "string", "format": "uuid"},
     "message_type": {"type": "string", "minLength": 1},
     "sender": {"type": "string", "minLength": 1},
     "target": {"type": "string", "minLength": 1},
@@ -17,6 +17,10 @@
     "expires_at": {"type": ["string", "null"], "format": "date-time"},
     "requires_ack": {"type": "boolean"},
     "idempotency_key": {"type": ["string", "null"]},
-    "body": {"type": "object"}
+    "body": {"type": "object"},
+    "artifacts": {
+      "type": "array",
+      "items": {"$ref": "artifact-reference-v1.schema.json"}
+    }
   }
 }
