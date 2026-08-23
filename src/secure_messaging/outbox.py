@@ -67,6 +67,10 @@ class DurableOutbox:
             for raw, attempts, next_at, error in rows
         ]
 
+    def state(self, message_id: str) -> str | None:
+        row = self._db.execute("SELECT state FROM outbox WHERE message_id=?", (message_id,)).fetchone()
+        return None if row is None else str(row[0])
+
     def defer(
         self,
         message_id: str,
