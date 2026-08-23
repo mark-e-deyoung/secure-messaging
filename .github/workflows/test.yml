@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  core:
+  python-core:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -19,7 +19,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Run deterministic core tests
+      - name: Run deterministic Python reference tests
         run: |
           PYTHONPATH=src python -m unittest discover -s tests -v
           python -m compileall -q src
+
+  dotnet-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Compile and run .NET 8 consumer conformance
+        run: dotnet run --project tests-dotnet/SecureMessaging.Conformance/SecureMessaging.Conformance.csproj --configuration Release
