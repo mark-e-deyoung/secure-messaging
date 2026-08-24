@@ -65,6 +65,7 @@ class WindowsPackagingTests(unittest.TestCase):
         requirements = (ROOT / "packaging" / "windows" / "build-requirements.txt").read_text(encoding="utf-8")
         self.assertIn("matrix-nio[e2e]==0.26.0", requirements)
         self.assertIn("pyinstaller==6.22.2", requirements)
+        self.assertIn("pyinstaller-hooks-contrib==2026.6", requirements)
         self.assertNotIn(">=", requirements)
 
     def test_build_driver_is_fail_closed_and_runs_both_smokes(self):
