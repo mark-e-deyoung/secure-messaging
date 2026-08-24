@@ -71,17 +71,20 @@ class WindowsPackagingTests(unittest.TestCase):
         script = (ROOT / "packaging" / "windows" / "Build-WindowsHelper.ps1").read_text(encoding="utf-8")
         for expected in (
             "Working tree is dirty",
-            "py', '-3.11",
+            "-FilePath 'py' -Arguments @('-3.11'",
             "Matrix E2EE imports: PASS",
-            "unittest', 'discover",
+            "'unittest', 'discover'",
             "SECURE_MESSAGING_TEST_TRANSPORT = 'memory'",
             "SECURE_MESSAGING_HELPER_PATH",
             "SecureMessaging.Conformance.csproj",
             "build-manifest.json",
             "Get-FileHash -Algorithm SHA256",
+            "System.Text.UTF8Encoding($false)",
+            "$Response.request_id -ne $RequestId",
         ):
             self.assertIn(expected, script)
         for forbidden in (
+            "--specpath",
             "SECURE_MESSAGING_MATRIX_ACCESS_TOKEN =",
             "SECURE_MESSAGING_MATRIX_PICKLE_KEY =",
             "Invoke-WebRequest",
