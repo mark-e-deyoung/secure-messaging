@@ -38,7 +38,6 @@ $SpecPath = Join-Path $PSScriptRoot 'secure-messaging-helper.spec'
 $RequirementsPath = Join-Path $PSScriptRoot 'build-requirements.txt'
 $PackageInventory = Join-Path $BuildRoot 'packages.json'
 $PyInstallerWork = Join-Path $BuildRoot 'pyinstaller-work'
-$PyInstallerSpecOut = Join-Path $BuildRoot 'pyinstaller-spec'
 $DistRoot = Join-Path $BuildRoot 'dist'
 $BundleDir = Join-Path $DistRoot 'secure-messaging-helper'
 
@@ -85,7 +84,6 @@ try {
         '-m', 'PyInstaller', '--clean', '--noconfirm',
         '--distpath', $DistRoot,
         '--workpath', $PyInstallerWork,
-        '--specpath', $PyInstallerSpecOut,
         $SpecPath
     )
 
@@ -98,7 +96,8 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw 'Unable to inventory resolved Python packages.'
     }
-    Set-Content -LiteralPath $PackageInventory -Value $PackageJson -Encoding UTF8
+    $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [IO.File]::WriteAllText($PackageInventory, [string]$PackageJson, $Utf8NoBom)
 
     $PythonVersion = (& $VenvPython -c 'import platform; print(platform.python_version())').Trim()
     $PyInstallerVersion = (& $VenvPython -c 'import PyInstaller; print(PyInstaller.__version__)').Trim()
@@ -120,9 +119,10 @@ try {
     $Vector.created_at = [DateTimeOffset]::UtcNow.ToString('o')
     $Vector.expires_at = [DateTimeOffset]::UtcNow.AddMinutes(5).ToString('o')
     $Vector.idempotency_key = 'windows-package-smoke-' + [guid]::NewGuid().ToString('N')
-    $Request = [ordered]@{
+    $RequestId = [guid]::NewGuid().ToString('N')
+    $RequestJson = [ordered]@{
         op = 'send'
-        request_id = [guid]::NewGuid().ToString('N')
+        request_id = $RequestId
         envelope = $Vector
     } | ConvertTo-Json -Depth 20 -Compress
 
@@ -131,12 +131,12 @@ try {
     try {
         $env:SECURE_MESSAGING_TEST_TRANSPORT = 'memory'
         $env:SECURE_MESSAGING_STATE_DIR = $SmokeState
-        $ResponseText = $Request | & $HelperPath --stdio-once
+        $ResponseText = $RequestJson | & $HelperPath --stdio-once
         if ($LASTEXITCODE -ne 0) {
             throw "Packaged helper smoke exited with $LASTEXITCODE"
         }
         $Response = $ResponseText | ConvertFrom-Json
-        if (-not $Response.accepted -or $Response.request_id -ne $Request.request_id -or $Response.message_id -ne $Vector.message_id -or $null -ne $Response.error_code) {
+        if (-not $Response.accepted -or $Response.request_id -ne $RequestId -or $Response.message_id -ne $Vector.message_id -or $null -ne $Response.error_code) {
             throw 'Packaged helper smoke returned an unexpected stdio-v1 response.'
         }
 
