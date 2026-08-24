@@ -59,7 +59,7 @@ public sealed class StdioSecureMessagingClient(string helperPath, TimeSpan? help
         using var timeoutCts = new CancellationTokenSource(timeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
         var token = linkedCts.Token;
-        var stderrDrain = DrainAsync(process.StandardError, token);
+        var stderrDrain = DrainAsync(process.StandardError);
 
         try
         {
@@ -70,7 +70,6 @@ public sealed class StdioSecureMessagingClient(string helperPath, TimeSpan? help
 
             var responseLine = await ReadBoundedLineAsync(process.StandardOutput, MaxResponseChars, token);
             await process.WaitForExitAsync(token);
-            await stderrDrain;
 
             if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(responseLine))
                 return new SendResult(false, envelope.MessageId, "helper_failed");
@@ -116,6 +115,7 @@ public sealed class StdioSecureMessagingClient(string helperPath, TimeSpan? help
                 TryKill(process);
                 await WaitForExitAfterKillAsync(process);
             }
+            await ObserveDrainAsync(stderrDrain);
         }
     }
 
@@ -140,12 +140,28 @@ public sealed class StdioSecureMessagingClient(string helperPath, TimeSpan? help
         }
     }
 
-    private static async Task DrainAsync(StreamReader reader, CancellationToken cancellationToken)
+    private static async Task DrainAsync(StreamReader reader)
     {
         var buffer = new char[4096];
-        while (await reader.ReadAsync(buffer.AsMemory(), cancellationToken) > 0)
+        while (await reader.ReadAsync(buffer.AsMemory(), CancellationToken.None) > 0)
         {
             // Intentionally discard provider/helper diagnostics. They must not cross the app IPC boundary.
+        }
+    }
+
+    private static async Task ObserveDrainAsync(Task drainTask)
+    {
+        try
+        {
+            await drainTask;
+        }
+        catch (IOException)
+        {
+            // Process teardown can close the redirected pipe while a read is outstanding.
+        }
+        catch (ObjectDisposedException)
+        {
+            // Process teardown closed the stream; diagnostics remain intentionally discarded.
         }
     }
 
