@@ -61,6 +61,52 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertIn("console=True", text)
         self.assertNotIn("onefile", text.lower().replace("onefile rather than", ""))
 
+    def test_build_requirements_pin_top_level_packaging_inputs(self):
+        requirements = (ROOT / "packaging" / "windows" / "build-requirements.txt").read_text(encoding="utf-8")
+        self.assertIn("matrix-nio[e2e]==0.26.0", requirements)
+        self.assertIn("pyinstaller==6.22.2", requirements)
+        self.assertNotIn(">=", requirements)
+
+    def test_build_driver_is_fail_closed_and_runs_both_smokes(self):
+        script = (ROOT / "packaging" / "windows" / "Build-WindowsHelper.ps1").read_text(encoding="utf-8")
+        for expected in (
+            "Working tree is dirty",
+            "py', '-3.11",
+            "Matrix E2EE imports: PASS",
+            "unittest', 'discover",
+            "SECURE_MESSAGING_TEST_TRANSPORT = 'memory'",
+            "SECURE_MESSAGING_HELPER_PATH",
+            "SecureMessaging.Conformance.csproj",
+            "build-manifest.json",
+            "Get-FileHash -Algorithm SHA256",
+        ):
+            self.assertIn(expected, script)
+        for forbidden in (
+            "SECURE_MESSAGING_MATRIX_ACCESS_TOKEN =",
+            "SECURE_MESSAGING_MATRIX_PICKLE_KEY =",
+            "Invoke-WebRequest",
+            "curl ",
+        ):
+            self.assertNotIn(forbidden, script)
+
+    def test_dotnet_client_bounds_and_times_out_helper_process(self):
+        client = (ROOT / "src-dotnet" / "SecureMessaging.Client" / "StdioSecureMessagingClient.cs").read_text(encoding="utf-8")
+        self.assertIn("MaxResponseChars = 64 * 1024", client)
+        self.assertIn("DefaultHelperTimeout = TimeSpan.FromSeconds(30)", client)
+        self.assertIn("Path.IsPathFullyQualified", client)
+        self.assertIn("process.Kill(entireProcessTree: true)", client)
+        self.assertIn('"helper_timeout"', client)
+        self.assertIn('"helper_response_too_large"', client)
+        self.assertIn('"helper_response_mismatch"', client)
+        self.assertIn("DrainAsync(process.StandardError", client)
+
+    def test_dotnet_conformance_launches_packaged_helper_when_requested(self):
+        program = (ROOT / "tests-dotnet" / "SecureMessaging.Conformance" / "Program.cs").read_text(encoding="utf-8")
+        self.assertIn("SECURE_MESSAGING_HELPER_PATH", program)
+        self.assertIn("SECURE_MESSAGING_TEST_TRANSPORT", program)
+        self.assertIn("await client.SendAsync(smokeEnvelope)", program)
+        self.assertIn("packaged-helper conformance: PASS", program)
+
 
 if __name__ == "__main__":
     unittest.main()
