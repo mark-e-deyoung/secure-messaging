@@ -80,6 +80,18 @@ try {
         $env:PYTHONPATH = $OldPythonPath
     }
 
+    Invoke-Checked -FilePath 'dotnet' -Arguments @(
+        'build', 'tests-dotnet\SecureMessaging.FakeHelper\SecureMessaging.FakeHelper.csproj', '--configuration', 'Release'
+    )
+    $FakeHelperPath = Join-Path $RepoRoot 'tests-dotnet\SecureMessaging.FakeHelper\bin\Release\net8.0\SecureMessaging.FakeHelper.exe'
+    if (-not (Test-Path -LiteralPath $FakeHelperPath -PathType Leaf)) {
+        throw "Synthetic helper executable was not produced: $FakeHelperPath"
+    }
+    Invoke-Checked -FilePath 'dotnet' -Arguments @(
+        'run', '--project', 'tests-dotnet\SecureMessaging.ClientProcessConformance\SecureMessaging.ClientProcessConformance.csproj',
+        '--configuration', 'Release', '--', $FakeHelperPath
+    )
+
     Invoke-Checked -FilePath $VenvPython -Arguments @(
         '-m', 'PyInstaller', '--clean', '--noconfirm',
         '--distpath', $DistRoot,
